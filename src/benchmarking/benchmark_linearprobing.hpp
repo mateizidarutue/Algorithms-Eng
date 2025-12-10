@@ -17,17 +17,26 @@ inline void benchmark_linear_probing(const std::vector<uint64_t>& keys, size_t t
         table.insert(key);
     }
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Linear Probing Insert Time: "
+    std::cout << "  Linear Probing Insert Time: "
               << std::chrono::duration<double>(end - start).count() << " seconds\n";
 
-    // Measure lookup time for Linear Probing
+    // HIT lookups = lookup keys we actually inserted
     start = std::chrono::high_resolution_clock::now();
-    for (const auto& key : keys) {
-        volatile bool found = table.lookup(key);
-    }
+    for (const auto& key : keys) volatile bool f = table.lookup(key);
     end = std::chrono::high_resolution_clock::now();
-    std::cout << "Linear Probing Lookup Time: "
-              << std::chrono::duration<double>(end - start).count() << " seconds\n";
+
+    std::cout << "  Linear Probing Lookup HIT Time: "
+              << std::chrono::duration<double>(end - start).count() << " s\n";
+
+    // MISS lookups = lookup keys that are not present
+    std::vector<uint64_t> miss_keys = generate_missing_keys(keys.size());
+
+    start = std::chrono::high_resolution_clock::now();
+    for (const auto& key : miss_keys) volatile bool f = table.lookup(key);
+    end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "  Linear Probing Lookup MISS Time: "
+              << std::chrono::duration<double>(end - start).count() << " s\n";
 
     table.print_probe_stats();
     table.export_histograms_csv("lp");
