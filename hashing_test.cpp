@@ -81,7 +81,7 @@ private:
     size_t capacity;
 };
 
-class RobinHoddHashTable
+class RobinHoodHashTable
 {
 public:
     explicit RobinHoodHashTable(size_t size)
