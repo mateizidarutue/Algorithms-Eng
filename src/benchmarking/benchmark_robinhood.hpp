@@ -16,17 +16,26 @@ inline void benchmark_robinhood_custom(const std::vector<uint64_t>& keys, size_t
         table.insert(key);
     }
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Custom Robin Hood Insert Time: "
+    std::cout << "  Custom Robin Hood Insert Time: "
               << std::chrono::duration<double>(end - start).count() << " seconds\n";
 
-    // Measure lookup time for classic manual implementation of Robin Hood
+    // HIT lookups
     start = std::chrono::high_resolution_clock::now();
-    for (auto& key : keys) {
-        volatile bool found = table.lookup(key);
-    }
+    for (auto& key : keys) volatile bool f = table.lookup(key);
     end = std::chrono::high_resolution_clock::now();
-    std::cout << "Custom Robin Hood Lookup Time: "
-              << std::chrono::duration<double>(end - start).count() << " seconds\n";
+
+    std::cout << "  Custom Robin Hood Lookup HIT Time: "
+              << std::chrono::duration<double>(end - start).count() << " s\n";
+
+    // MISS lookups
+    std::vector<uint64_t> miss_keys = generate_missing_keys(keys.size());
+
+    start = std::chrono::high_resolution_clock::now();
+    for (auto& key : miss_keys) volatile bool f = table.lookup(key);
+    end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "  Custom Robin Hood Lookup MISS Time: "
+              << std::chrono::duration<double>(end - start).count() << " s\n";
 
     table.print_probe_stats();
     table.export_histograms_csv("rh");

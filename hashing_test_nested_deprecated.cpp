@@ -497,7 +497,7 @@ void benchmark_linear_probing(const std::vector<uint64_t>& keys, size_t table_ca
         table.insert(key);
     }
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Linear Probing Insert Time: "
+    std::cout << "  Linear Probing Insert Time: "
               << std::chrono::duration<double>(end - start).count() << " seconds\n";
 
     // Measure lookup time for Linear Probing
@@ -506,7 +506,7 @@ void benchmark_linear_probing(const std::vector<uint64_t>& keys, size_t table_ca
         volatile bool found = table.lookup(key);
     }
     end = std::chrono::high_resolution_clock::now();
-    std::cout << "Linear Probing Lookup Time: "
+    std::cout << "  Linear Probing Lookup Time: "
               << std::chrono::duration<double>(end - start).count() << " seconds\n";
 
     table.print_probe_stats();

@@ -177,13 +177,13 @@ public:
 
     void print_probe_stats() const {
         std::cout << "\n[Robin Hood Stats]\n";
-        std::cout << "Avg insert probes: " << average_insert_probes() << "\n";
-        std::cout << "Max insert probes: " << max_probe_insert << "\n";
-        std::cout << "Insert variance: " << variance_insert_probes() << "\n";
-        std::cout << "Avg lookup probes: " << average_lookup_probes() << "\n";
-        std::cout << "Lookup variance: " << variance_lookup_probes() << "\n";
-        std::cout << "Avg lookup HIT probes: " << lookup_hit_avg() << "\n";
-        std::cout << "Avg lookup MISS probes: " << lookup_miss_avg() << "\n";
+        std::cout << "  Avg insert probes: " << average_insert_probes() << "\n";
+        std::cout << "  Max insert probes: " << max_probe_insert << "\n";
+        std::cout << "  Insert variance: " << variance_insert_probes() << "\n";
+        std::cout << "  Avg lookup probes: " << average_lookup_probes() << "\n";
+        std::cout << "  Lookup variance: " << variance_lookup_probes() << "\n";
+        std::cout << "  Avg lookup HIT probes: " << lookup_hit_avg() << "\n";
+        std::cout << "  Avg lookup MISS probes: " << lookup_miss_avg() << "\n";
 
         std::cout<< "----------------------------" << '\n' << '\n';
     }
