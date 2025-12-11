@@ -1,38 +1,36 @@
 #include <iostream>
+#include <vector>
+
 #include "utils/random_keys.hpp"
 #include "benchmarking/benchmark_robinhood_library.hpp"
 #include "benchmarking/benchmark_linearprobing.hpp"
 #include "benchmarking/benchmark_robinhood.hpp"
 
 int main() {
-    /* CONFIGURABLE:
-        Load factor: number of elements inserted / table capacity
-        Higher load -> more collisions -> more probes
-        Lower load factor -> faster lookups, fewer collisions
-    */
-    const double load_factor = 0.7;
-
-    // CONFIGURABLE: Table size: number of slots in the hash table for testing different behaviors
     const size_t table_size = 1'000'000;
 
-    // CONFIGURABLE: Number of keys to insert based on load factor
-    const size_t num_keys_to_insert = static_cast<size_t>(table_size * load_factor);
+    // Load factors we want to test
+    const std::vector<double> load_factors = {
+        0.25, 0.40, 0.50, 0.70, 0.80, 0.90, 0.95, 0.97, 0.99
+    };
 
-    // Generate random keys
-    std::vector<uint64_t> keys_random = generate_random_keys(num_keys_to_insert);
+    for (double lf : load_factors) {
+        size_t num_keys = static_cast<size_t>(lf * table_size);
 
-    std::cout << "\033[31mBENCHMARKING WIH RANDOM KEYS:\033[0m\n";
-    //benchmark_robin_hood_library(keys); // tsl::robin_map
-    benchmark_linear_probing(keys_random, table_size);
-    benchmark_robinhood_custom(keys_random, table_size);
+        // ---------- RANDOM KEYS ----------
+        auto keys_random = generate_random_keys(num_keys);
 
-    // Generate clustered keys
-    std::vector<uint64_t> keys_clustered = generate_clustered_keys(num_keys_to_insert);
+        std::cout << "\n=== LF = " << lf << " (RANDOM) ===\n";
+        benchmark_linear_probing(keys_random, table_size, lf, "random");
+        benchmark_robinhood_custom(keys_random, table_size, lf, "random");
 
-    // Benchmark with clustered keys
-    std::cout << "\033[31mBENCHMARKING WITH CLUSTERED KEYS:\033[0m\n";
-    benchmark_linear_probing(keys_clustered, table_size);
-    benchmark_robinhood_custom(keys_clustered, table_size);
+        // ---------- MULTI-CLUSTER (HASH-CLUSTERED) KEYS ----------
+        auto keys_multi = generate_multi_cluster_keys(num_keys, table_size);
+
+        std::cout << "\n=== LF = " << lf << " (MULTI-CLUSTER) ===\n";
+        benchmark_linear_probing(keys_multi, table_size, lf, "multi");
+        benchmark_robinhood_custom(keys_multi, table_size, lf, "multi");
+    }
 
     return 0;
 }
