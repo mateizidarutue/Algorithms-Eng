@@ -7,7 +7,7 @@
 #include "../hashing/linear_probing.hpp"
 
 // Encapsulates linear probing insertion and lookup timing
-inline void benchmark_linear_probing(const std::vector<uint64_t>& keys, size_t table_capacity) {
+inline void benchmark_linear_probing(const std::vector<uint64_t>& keys, size_t table_capacity, double load_factor = 0.0) {
     // Linear Probing Hash Table
     LinearProbingHashTable table(table_capacity);
 
@@ -39,5 +39,11 @@ inline void benchmark_linear_probing(const std::vector<uint64_t>& keys, size_t t
               << std::chrono::duration<double>(end - start).count() << " s\n";
 
     table.print_probe_stats();
-    table.export_histograms_csv("lp");
+    
+    // Create filename with load factor and hash function type
+    std::string prefix = "lp";
+    if (load_factor > 0.0) {
+        prefix += "_lf_" + std::to_string(static_cast<int>(load_factor * 100));
+    }
+    table.export_histograms_csv(prefix);
 }

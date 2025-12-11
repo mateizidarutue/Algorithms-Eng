@@ -21,7 +21,8 @@ public:
           total_probes_insert_sq(0), total_probes_lookup_sq(0)
     {
         insert_histogram_fixed.assign(21, 0);
-        lookup_histogram_fixed.assign(21, 0);
+        lookup_hit_histogram_fixed.assign(21, 0);
+        lookup_miss_histogram_fixed.assign(21, 0);
     }
 
     void insert(uint64_t key) {
@@ -37,9 +38,6 @@ public:
                 // Found empty spot, place the element here
                 table[index] = current;
 
-                size_t final_home = custom_hash(current.key) % capacity;
-                size_t final_distance = (index + capacity - final_home) % capacity;
-
                 total_probes_insert += probes_this_insert;
                 total_probes_insert_sq += probes_this_insert * probes_this_insert;
 
@@ -53,13 +51,6 @@ public:
                     insert_histogram_fixed[20]++;
                 }
                 insert_histogram_dynamic[probes_this_insert]++;
-
-                final_distance_histogram_dynamic[final_distance]++;
-                if (final_distance < 20) {
-                    final_distance_histogram_fixed[final_distance]++;
-                } else {
-                    final_distance_histogram_fixed[20]++;
-                }
 
                 num_inserts++;
 
@@ -106,12 +97,12 @@ public:
                 }
 
                 if (probes_this_lookup < 20) {
-                    lookup_histogram_fixed[probes_this_lookup]++;
+                    lookup_hit_histogram_fixed[probes_this_lookup]++;
                 } else {
-                    lookup_histogram_fixed[20]++;
+                    lookup_hit_histogram_fixed[20]++;
                 }
 
-                lookup_histogram_dynamic[probes_this_lookup]++;
+                lookup_hit_histogram_dynamic[probes_this_lookup]++;
 
                 num_lookups++;
                 return false; // Empty spot hit, key not present
@@ -129,12 +120,12 @@ public:
                 }
 
                 if (probes_this_lookup < 20) {
-                    lookup_histogram_fixed[probes_this_lookup]++;
+                    lookup_miss_histogram_fixed[probes_this_lookup]++;
                 } else {
-                    lookup_histogram_fixed[20]++;
+                    lookup_miss_histogram_fixed[20]++;
                 }
 
-                lookup_histogram_dynamic[probes_this_lookup]++;
+                lookup_miss_histogram_dynamic[probes_this_lookup]++;
 
                 num_lookups++;
                 return true;
@@ -157,12 +148,12 @@ public:
                 }
 
                 if (probes_this_lookup < 20) {
-                    lookup_histogram_fixed[probes_this_lookup]++;
+                    lookup_miss_histogram_fixed[probes_this_lookup]++;
                 } else {
-                    lookup_histogram_fixed[20]++;
+                    lookup_miss_histogram_fixed[20]++;
                 }
 
-                lookup_histogram_dynamic[probes_this_lookup]++;
+                lookup_miss_histogram_dynamic[probes_this_lookup]++;
 
                 num_lookups++;
                 return false;
@@ -223,19 +214,56 @@ public:
     }
 
     void export_histograms_csv(const std::string& prefix) const {
+        // Aggregate hit + miss for backward compatibility
+        HistogramFixed lookup_fixed_sum(21, 0);
+        for (size_t i = 0; i < 21; ++i) {
+            lookup_fixed_sum[i] = lookup_hit_histogram_fixed[i] + lookup_miss_histogram_fixed[i];
+        }
+        HistogramDynamic lookup_dynamic_sum = lookup_hit_histogram_dynamic;
+        for (auto& kv : lookup_miss_histogram_dynamic) {
+            lookup_dynamic_sum[kv.first] += kv.second;
+        }
+
         csvutil::export_fixed_histogram(prefix + "_insert_fixed.csv",
                                         insert_histogram_fixed);
         csvutil::export_fixed_histogram(prefix + "_lookup_fixed.csv",
-                                        lookup_histogram_fixed);
+                                        lookup_fixed_sum);
+        csvutil::export_fixed_histogram(prefix + "_lookup_miss_fixed.csv",
+                                        lookup_miss_histogram_fixed);
+        csvutil::export_fixed_histogram(prefix + "_lookup_hit_fixed.csv",
+                                        lookup_hit_histogram_fixed);
         csvutil::export_fixed_histogram(prefix + "_final_distance_fixed.csv",
                                         final_distance_histogram_fixed);
 
         csvutil::export_dynamic_histogram(prefix + "_insert_dynamic.csv",
                                         insert_histogram_dynamic);
         csvutil::export_dynamic_histogram(prefix + "_lookup_dynamic.csv",
-                                        lookup_histogram_dynamic);
+                                        lookup_dynamic_sum);
+        csvutil::export_dynamic_histogram(prefix + "_lookup_hit_dynamic.csv",
+                                        lookup_hit_histogram_dynamic);
+        csvutil::export_dynamic_histogram(prefix + "_lookup_miss_dynamic.csv",
+                                        lookup_miss_histogram_dynamic);
         csvutil::export_dynamic_histogram(prefix + "_final_distance_dynamic.csv",
                                         final_distance_histogram_dynamic);
+    }
+
+    void recompute_final_distance_histograms() {
+        final_distance_histogram_fixed.assign(21, 0);
+        final_distance_histogram_dynamic.clear();
+
+        for (size_t idx = 0; idx < capacity; ++idx) {
+            if (!table[idx].occupied) continue;
+
+            size_t home = custom_hash(table[idx].key) % capacity;
+            size_t dist = (idx + capacity - home) % capacity;
+
+            if (dist < 20) {
+                final_distance_histogram_fixed[dist]++;
+            } else {
+                final_distance_histogram_fixed[20]++;
+            }
+            final_distance_histogram_dynamic[dist]++;
+        }
     }
 
 
@@ -270,7 +298,8 @@ private:
         of probe statistics without dynamically resizing the histogram.
     */
     HistogramFixed insert_histogram_fixed;
-    HistogramFixed lookup_histogram_fixed;
+    HistogramFixed lookup_hit_histogram_fixed;
+    HistogramFixed lookup_miss_histogram_fixed;
 
     HistogramFixed final_distance_histogram_fixed = std::vector<size_t>(21, 0);
     HistogramDynamic final_distance_histogram_dynamic;
@@ -281,5 +310,6 @@ private:
         of probe lengths beyond the fixed histogram's limits.
     */
     HistogramDynamic insert_histogram_dynamic;
-    HistogramDynamic lookup_histogram_dynamic;
+    HistogramDynamic lookup_hit_histogram_dynamic;
+    HistogramDynamic lookup_miss_histogram_dynamic;
 };

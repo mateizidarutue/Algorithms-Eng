@@ -21,7 +21,8 @@ public:
     {
         // CONFIGURABLE: Histogram depth: Bucket count set to 21, raise to capture more probe lengths
         insert_histogram_fixed.assign(21, 0);
-        lookup_histogram_fixed.assign(21, 0);
+        lookup_hit_histogram_fixed.assign(21, 0);
+        lookup_miss_histogram_fixed.assign(21, 0);
     }
 
     void insert(uint64_t key) {
@@ -77,12 +78,12 @@ public:
                 num_lookup_hit++;
 
                 if (probes < 20) {
-                    lookup_histogram_fixed[probes]++;
+                    lookup_hit_histogram_fixed[probes]++;
                 } else {
-                    lookup_histogram_fixed[20]++;
+                    lookup_hit_histogram_fixed[20]++;
                 }
 
-                lookup_histogram_dynamic[probes]++;
+                lookup_hit_histogram_dynamic[probes]++;
 
                 num_lookups++;
 
@@ -105,12 +106,12 @@ public:
         num_lookup_miss++;
 
         if (probes < 20) {
-            lookup_histogram_fixed[probes]++;
+            lookup_miss_histogram_fixed[probes]++;
         } else {
-            lookup_histogram_fixed[20]++;
+            lookup_miss_histogram_fixed[20]++;
         }
 
-        lookup_histogram_dynamic[probes]++;
+        lookup_miss_histogram_dynamic[probes]++;
 
         num_lookups++;
 
@@ -166,15 +167,32 @@ public:
     }
 
     void export_histograms_csv(const std::string& prefix) const {
+        HistogramFixed lookup_fixed_sum(21, 0);
+        for (size_t i = 0; i < 21; ++i) {
+            lookup_fixed_sum[i] = lookup_hit_histogram_fixed[i] + lookup_miss_histogram_fixed[i];
+        }
+        HistogramDynamic lookup_dynamic_sum = lookup_hit_histogram_dynamic;
+        for (auto& kv : lookup_miss_histogram_dynamic) {
+            lookup_dynamic_sum[kv.first] += kv.second;
+        }
+
         csvutil::export_fixed_histogram(prefix + "_insert_fixed.csv",
                                         insert_histogram_fixed);
         csvutil::export_fixed_histogram(prefix + "_lookup_fixed.csv",
-                                        lookup_histogram_fixed);
+                                        lookup_fixed_sum);
+        csvutil::export_fixed_histogram(prefix + "_lookup_hit_fixed.csv",
+                                        lookup_hit_histogram_fixed);
+        csvutil::export_fixed_histogram(prefix + "_lookup_miss_fixed.csv",
+                                        lookup_miss_histogram_fixed);
 
         csvutil::export_dynamic_histogram(prefix + "_insert_dynamic.csv",
                                         insert_histogram_dynamic);
         csvutil::export_dynamic_histogram(prefix + "_lookup_dynamic.csv",
-                                        lookup_histogram_dynamic);
+                                        lookup_dynamic_sum);
+        csvutil::export_dynamic_histogram(prefix + "_lookup_hit_dynamic.csv",
+                                        lookup_hit_histogram_dynamic);
+        csvutil::export_dynamic_histogram(prefix + "_lookup_miss_dynamic.csv",
+                                        lookup_miss_histogram_dynamic);
         }
 
 
@@ -206,7 +224,8 @@ private:
         of probe statistics without dynamically resizing the histogram.
     */
     HistogramFixed insert_histogram_fixed;
-    HistogramFixed lookup_histogram_fixed;
+    HistogramFixed lookup_hit_histogram_fixed;
+    HistogramFixed lookup_miss_histogram_fixed;
 
     /*
         Dynamic histograms use unordered maps to capture the full range of probe lengths.
@@ -214,5 +233,6 @@ private:
         of probe lengths beyond the fixed histogram's limits.
     */
     HistogramDynamic insert_histogram_dynamic;
-    HistogramDynamic lookup_histogram_dynamic;
+    HistogramDynamic lookup_hit_histogram_dynamic;
+    HistogramDynamic lookup_miss_histogram_dynamic;
 };
